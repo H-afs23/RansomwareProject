@@ -1,0 +1,27 @@
+============================================================
+  RANSOMWARE DETECTOR LOG
+  Started: 2026-05-19 14:52:10
+============================================================
+
+[*] [2026-05-19 14:52:10] INFO: Detector initialized
+    Details: Watching: C:\Users\City Computers\Desktop\TestFolder
+[*] [2026-05-19 14:52:11] INFO: Process monitor started (checking every 5 seconds)
+[*] [2026-05-19 14:52:11] INFO: Using real-time file watcher (watchdog)
+[*] [2026-05-19 14:53:31] INFO: File created: document_1.txt
+[*] [2026-05-19 14:53:34] INFO: File created: document_2.txt
+[!!!] [2026-05-19 14:53:41] CRITICAL: RAPID FILE ACTIVITY: 10 changes in 5s
+    Details: This matches mass-encryption behavior of ransomware!
+[*] [2026-05-19 14:53:41] INFO: File renamed: document_1.txt --> document_1.crypto
+[!!!] [2026-05-19 14:53:42] CRITICAL: RANSOMWARE EXTENSION DETECTED: .crypto
+    Details: File: C:\Users\City Computers\Desktop\TestFolder\document_1.crypto
+[*] [2026-05-19 14:53:44] INFO: File renamed: document_2.txt --> document_2.enc
+[!!!] [2026-05-19 14:53:44] CRITICAL: RANSOMWARE EXTENSION DETECTED: .enc
+    Details: File: C:\Users\City Computers\Desktop\TestFolder\document_2.enc
+[!!!] [2026-05-19 14:53:45] CRITICAL: RAPID FILE ACTIVITY: 10 changes in 5s
+    Details: This matches mass-encryption behavior of ransomware!
+[*] [2026-05-19 14:53:46] INFO: File renamed: document_3.txt --> document_3.enc
+[!!!] [2026-05-19 14:53:46] CRITICAL: RANSOMWARE EXTENSION DETECTED: .enc
+    Details: File: C:\Users\City Computers\Desktop\TestFolder\document_3.enc
+[*] [2026-05-19 14:53:46] INFO: File renamed: document_4.txt --> document_4.enc
+[!!!] [2026-05-19 14:53:46] CRITICAL: RANSOMWARE EXTENSION DETECTED: .enc
+    Details: File: C:\Users\City Computers\Desktop\TestFolder\document_4.enc

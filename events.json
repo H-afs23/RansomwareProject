@@ -1,0 +1,92 @@
+[
+  {
+    "timestamp": "2026-05-19 14:52:10",
+    "level": "INFO",
+    "message": "Detector initialized",
+    "details": "Watching: C:\\Users\\City Computers\\Desktop\\TestFolder"
+  },
+  {
+    "timestamp": "2026-05-19 14:52:11",
+    "level": "INFO",
+    "message": "Process monitor started (checking every 5 seconds)",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:52:11",
+    "level": "INFO",
+    "message": "Using real-time file watcher (watchdog)",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:53:31",
+    "level": "INFO",
+    "message": "File created: document_1.txt",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:53:34",
+    "level": "INFO",
+    "message": "File created: document_2.txt",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:53:41",
+    "level": "CRITICAL",
+    "message": "RAPID FILE ACTIVITY: 10 changes in 5s",
+    "details": "This matches mass-encryption behavior of ransomware!"
+  },
+  {
+    "timestamp": "2026-05-19 14:53:41",
+    "level": "INFO",
+    "message": "File renamed: document_1.txt --> document_1.crypto",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:53:42",
+    "level": "CRITICAL",
+    "message": "RANSOMWARE EXTENSION DETECTED: .crypto",
+    "details": "File: C:\\Users\\City Computers\\Desktop\\TestFolder\\document_1.crypto"
+  },
+  {
+    "timestamp": "2026-05-19 14:53:44",
+    "level": "INFO",
+    "message": "File renamed: document_2.txt --> document_2.enc",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:53:44",
+    "level": "CRITICAL",
+    "message": "RANSOMWARE EXTENSION DETECTED: .enc",
+    "details": "File: C:\\Users\\City Computers\\Desktop\\TestFolder\\document_2.enc"
+  },
+  {
+    "timestamp": "2026-05-19 14:53:45",
+    "level": "CRITICAL",
+    "message": "RAPID FILE ACTIVITY: 10 changes in 5s",
+    "details": "This matches mass-encryption behavior of ransomware!"
+  },
+  {
+    "timestamp": "2026-05-19 14:53:46",
+    "level": "INFO",
+    "message": "File renamed: document_3.txt --> document_3.enc",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:53:46",
+    "level": "CRITICAL",
+    "message": "RANSOMWARE EXTENSION DETECTED: .enc",
+    "details": "File: C:\\Users\\City Computers\\Desktop\\TestFolder\\document_3.enc"
+  },
+  {
+    "timestamp": "2026-05-19 14:53:46",
+    "level": "INFO",
+    "message": "File renamed: document_4.txt --> document_4.enc",
+    "details": ""
+  },
+  {
+    "timestamp": "2026-05-19 14:53:46",
+    "level": "CRITICAL",
+    "message": "RANSOMWARE EXTENSION DETECTED: .enc",
+    "details": "File: C:\\Users\\City Computers\\Desktop\\TestFolder\\document_4.enc"
+  }
+]

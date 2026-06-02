@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ransomware Activity Detector — Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --bg2: #0f1117;
+    --bg3: #161920;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --accent: #00d4aa;
+    --danger: #ff4757;
+    --warn: #ffa502;
+    --info: #70a1ff;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Scan line animation ── */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,212,170,0.012) 2px,
+      rgba(0,212,170,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 14px;
+  }
+
+  .shield {
+    width: 42px; height: 42px;
+    background: rgba(0,212,170,0.12);
+    border: 1px solid rgba(0,212,170,0.3);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  .logo-text h1 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+  .logo-text p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: var(--mono);
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    transition: all 0.3s;
+  }
+  .status-badge.active {
+    background: rgba(0,212,170,0.1);
+    border: 1px solid rgba(0,212,170,0.3);
+    color: var(--accent);
+  }
+  .status-badge.idle {
+    background: rgba(107,114,128,0.1);
+    border: 1px solid rgba(107,114,128,0.2);
+    color: var(--muted);
+  }
+  .pulse {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  /* ── Stats row ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.critical::before { background: var(--danger); }
+  .stat-card.warning::before  { background: var(--warn); }
+  .stat-card.info::before     { background: var(--info); }
+  .stat-card.total::before    { background: var(--accent); }
+
+  .stat-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-size: 32px;
+    font-weight: 600;
+    font-family: var(--mono);
+    line-height: 1;
+  }
+  .stat-card.critical .stat-value { color: var(--danger); }
+  .stat-card.warning  .stat-value { color: var(--warn); }
+  .stat-card.info     .stat-value { color: var(--info); }
+  .stat-card.total    .stat-value { color: var(--accent); }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── Main panels ── */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+  }
+
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-size: 12px;
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-badge {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    color: var(--muted);
+  }
+
+  /* ── Alert Log ── */
+  .log-area {
+    height: 440px;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .log-area::-webkit-scrollbar { width: 4px; }
+  .log-area::-webkit-scrollbar-track { background: transparent; }
+  .log-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    animation: slideIn 0.3s ease;
+    transition: background 0.2s;
+  }
+  .log-entry:hover { background: rgba(255,255,255,0.02); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .log-entry.CRITICAL { border-left: 3px solid var(--danger); }
+  .log-entry.WARNING  { border-left: 3px solid var(--warn); }
+  .log-entry.INFO     { border-left: 3px solid rgba(255,255,255,0.1); }
+
+  .log-icon {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--mono);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .CRITICAL .log-icon { background: rgba(255,71,87,0.15); color: var(--danger); }
+  .WARNING  .log-icon { background: rgba(255,165,2,0.12); color: var(--warn); }
+  .INFO     .log-icon { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+  .log-content { flex: 1; min-width: 0; }
+
+  .log-message {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .CRITICAL .log-message { color: #ffcdd3; }
+  .WARNING  .log-message { color: #ffe8b3; }
+
+  .log-details {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-top: 3px;
+    word-break: break-all;
+  }
+
+  .log-time {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-top: 3px;
+  }
+
+  .empty-log {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    gap: 10px;
+  }
+  .empty-log .big { font-size: 32px; }
+  .empty-log p { font-size: 12px; font-family: var(--mono); }
+
+  /* ── Threat Chart ── */
+  .chart-area {
+    padding: 16px 18px;
+    height: 200px;
+    position: relative;
+  }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 120px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+
+  .bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    transition: height 0.4s ease;
+    min-height: 2px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .bar:hover::after {
+    content: attr(data-val);
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text);
+    background: var(--bg3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .bar.critical { background: var(--danger); opacity: 0.8; }
+  .bar.warning  { background: var(--warn);   opacity: 0.8; }
+  .bar.info     { background: var(--info);   opacity: 0.6; }
+  .bar.empty    { background: var(--border2); }
+
+  .bar-labels {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .bar-label {
+    flex: 1;
+    text-align: center;
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Sidebar info ── */
+  .sidebar { display: flex; flex-direction: column; gap: 14px; }
+
+  .info-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .threat-list { padding: 8px 0; }
+
+  .threat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .threat-item:last-child { border-bottom: none; }
+  .threat-item:hover { background: rgba(255,255,255,0.02); }
+
+  .threat-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .threat-dot.danger  { background: var(--danger); }
+  .threat-dot.warn    { background: var(--warn); }
+  .threat-dot.success { background: var(--accent); }
+
+  .threat-name {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text);
+    flex: 1;
+  }
+  .threat-status {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+  .threat-status.active {
+    background: rgba(255,71,87,0.15);
+    color: var(--danger);
+  }
+  .threat-status.ok {
+    background: rgba(0,212,170,0.1);
+    color: var(--accent);
+  }
+
+  /* ── Control bar ── */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+    background: var(--bg3);
+  }
+
+  button {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  button:hover { background: rgba(255,255,255,0.06); }
+  button.primary {
+    background: rgba(0,212,170,0.1);
+    border-color: rgba(0,212,170,0.3);
+    color: var(--accent);
+  }
+  button.primary:hover { background: rgba(0,212,170,0.18); }
+  button.danger {
+    background: rgba(255,71,87,0.08);
+    border-color: rgba(255,71,87,0.25);
+    color: var(--danger);
+  }
+
+  .spacer { flex: 1; }
+
+  .refresh-info {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+
+  /* ── Tabs ── */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    padding: 10px 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    transition: all 0.15s;
+    margin-bottom: -1px;
+  }
+  .tab.active {
+    color: var(--text);
+    background: var(--bg3);
+    border-color: var(--border);
+    border-bottom-color: var(--bg3);
+  }
+  .tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.03); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="shield">🛡️</div>
+      <div class="logo-text">
+        <h1>Ransomware Activity Detector</h1>
+        <p>Cybersecurity Project — Real-Time Monitor</p>
+      </div>
+    </div>
+    <div class="status-badge active" id="statusBadge">
+      <div class="pulse" id="pulse"></div>
+      <span id="statusText">MONITORING</span>
+    </div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-card total">
+      <div class="stat-label">Total Events</div>
+      <div class="stat-value" id="totalCount">0</div>
+      <div class="stat-sub">All detected events</div>
+    </div>
+    <div class="stat-card critical">
+      <div class="stat-label">Critical Alerts</div>
+      <div class="stat-value" id="criticalCount">0</div>
+      <div class="stat-sub">Immediate threat</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-label">Warnings</div>
+      <div class="stat-value" id="warnCount">0</div>
+      <div class="stat-sub">Suspicious behavior</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-label">Info Events</div>
+      <div class="stat-value" id="infoCount">0</div>
+      <div class="stat-sub">Normal file activity</div>
+    </div>
+  </div>
+
+  <!-- MAIN PANELS -->
+  <div class="panels">
+
+    <!-- LEFT: LOG -->
+    <div class="panel">
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('log', this)">Alert Log</div>
+        <div class="tab" onclick="switchTab('chart', this)">Activity Chart</div>
+        <div class="tab" onclick="switchTab('info', this)">How It Works</div>
+      </div>
+
+      <!-- TAB 1: LOG -->
+      <div id="tab-log" class="tab-content active">
+        <div class="log-area" id="logArea">
+          <div class="empty-log">
+            <div class="big">🔍</div>
+            <p>Waiting for events...</p>
+            <p style="margin-top:6px;color:#444">Run ransomware_detector.py to start</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: CHART -->
+      <div id="tab-chart" class="tab-content">
+        <div class="chart-area">
+          <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:12px;">EVENTS OVER TIME (last 20 checks)</div>
+          <div class="bar-chart" id="barChart"></div>
+          <div class="bar-labels" id="barLabels"></div>
+        </div>
+        <div style="display:flex;gap:16px;padding:0 18px 14px;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);color:var(--muted);">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--danger);"></div> Critical
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);color:var(--muted);">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--warn);"></div> Warning
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);color:var(--muted);">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--info);"></div> Info
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: HOW IT WORKS -->
+      <div id="tab-info" class="tab-content">
+        <div style="padding:20px 22px;line-height:1.8;color:#a0aec0;">
+          <p style="font-size:13px;margin-bottom:16px;color:var(--text);font-weight:500;">This tool detects ransomware using 4 behavioral techniques:</p>
+
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="background:var(--bg3);border-radius:8px;padding:14px 16px;border-left:3px solid var(--danger);">
+              <p style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">🔴 Extension Detection</p>
+              <p style="font-size:12px;">Monitors file creation and rename events. Flags 50+ known ransomware extensions like <code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;font-family:var(--mono)">.locked .enc .wcry .crypto</code></p>
+            </div>
+
+            <div style="background:var(--bg3);border-radius:8px;padding:14px 16px;border-left:3px solid var(--danger);">
+              <p style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">🔴 Rapid Change Detection</p>
+              <p style="font-size:12px;">Ransomware encrypts all files very fast. This tool counts file events — if 10+ changes happen in 5 seconds, it triggers a critical alert.</p>
+            </div>
+
+            <div style="background:var(--bg3);border-radius:8px;padding:14px 16px;border-left:3px solid var(--warn);">
+              <p style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">🟡 Entropy Analysis</p>
+              <p style="font-size:12px;">Encrypted files are nearly random data — they have very high "entropy". Normal text files have low entropy. Any file with entropy &gt; 7.5 bits/byte is flagged.</p>
+            </div>
+
+            <div style="background:var(--bg3);border-radius:8px;padding:14px 16px;border-left:3px solid var(--info);">
+              <p style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">🔵 Process Monitoring</p>
+              <p style="font-size:12px;">Scans running processes every 5 seconds. If any process opens files with ransomware extensions, that process is flagged by name and PID.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button class="primary" onclick="loadEvents()">↻ Refresh</button>
+        <button onclick="clearDisplay()">Clear Display</button>
+        <div class="spacer"></div>
+        <div class="refresh-info" id="refreshInfo">Auto-refresh every 3s</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Threat Indicators -->
+      <div class="info-panel">
+        <div class="panel-header">
+          <span class="panel-title">Threat Indicators</span>
+          <span class="panel-badge" id="threatBadge">Checking...</span>
+        </div>
+        <div class="threat-list">
+          <div class="threat-item">
+            <div class="threat-dot success" id="dot-ext"></div>
+            <div class="threat-name">Ransom Extension</div>
+            <div class="threat-status ok" id="badge-ext">CLEAR</div>
+          </div>
+          <div class="threat-item">
+            <div class="threat-dot success" id="dot-rapid"></div>
+            <div class="threat-name">Rapid Changes</div>
+            <div class="threat-status ok" id="badge-rapid">CLEAR</div>
+          </div>
+          <div class="threat-item">
+            <div class="threat-dot success" id="dot-entropy"></div>
+            <div class="threat-name">High Entropy</div>
+            <div class="threat-status ok" id="badge-entropy">CLEAR</div>
+          </div>
+          <div class="threat-item">
+            <div class="threat-dot success" id="dot-proc"></div>
+            <div class="threat-name">Process Alert</div>
+            <div class="threat-status ok" id="badge-proc">CLEAR</div>
+          </div>
+          <div class="threat-item">
+            <div class="threat-dot success" id="dot-note"></div>
+            <div class="threat-name">Ransom Note</div>
+            <div class="threat-status ok" id="badge-note">CLEAR</div>
+          </div>
+          <div class="threat-item">
+            <div class="threat-dot success" id="dot-mass"></div>
+            <div class="threat-name">Mass Deletion</div>
+            <div class="threat-status ok" id="badge-mass">CLEAR</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Watch Config -->
+      <div class="info-panel">
+        <div class="panel-header">
+          <span class="panel-title">Configuration</span>
+        </div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:3px;">WATCH FOLDER</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text);word-break:break-all;">Desktop\TestFolder</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:3px;">RAPID THRESHOLD</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text);">10 events / 5 seconds</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:3px;">ENTROPY LIMIT</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text);">&gt; 7.5 bits/byte</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:3px;">KNOWN RANSOM EXTENSIONS</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text);">50+ patterns</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:3px;">RANSOM NOTE PATTERNS</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text);">15+ filenames</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Last Alert -->
+      <div class="info-panel" id="lastAlertPanel">
+        <div class="panel-header">
+          <span class="panel-title">Last Critical Alert</span>
+        </div>
+        <div style="padding:14px 16px;">
+          <div id="lastAlert" style="font-size:12px;font-family:var(--mono);color:var(--muted);">No critical alerts yet</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    Ransomware Activity Detector &nbsp;|&nbsp; Cybersecurity Course Project &nbsp;|&nbsp; 
+    Dashboard auto-refreshes every 3s &nbsp;|&nbsp; 
+    Events loaded from <code>events.json</code>
+  </footer>
+
+</div>
+
+<script>
+  let allEvents = [];
+  let chartData = [];
+  let tabActive = 'log';
+  const MAX_CHART_POINTS = 20;
+
+  function switchTab(name, el) {
+    tabActive = name;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'chart') renderChart();
+  }
+
+  async function loadEvents() {
+    try {
+      const r = await fetch('events.json?t=' + Date.now());
+      if (!r.ok) throw new Error('No events file yet');
+      const data = await r.json();
+      if (JSON.stringify(data) !== JSON.stringify(allEvents)) {
+        allEvents = data;
+        renderLog();
+        updateStats();
+        updateThreatIndicators();
+        updateChartData();
+        if (tabActive === 'chart') renderChart();
+      }
+    } catch (e) {
+      // File not created yet - waiting for detector to run
+    }
+    document.getElementById('refreshInfo').textContent =
+      'Updated: ' + new Date().toLocaleTimeString();
+  }
+
+  function renderLog() {
+    const area = document.getElementById('logArea');
+    if (allEvents.length === 0) {
+      area.innerHTML = `<div class="empty-log"><div class="big">🔍</div><p>Waiting for events...</p><p style="margin-top:6px;color:#444">Run ransomware_detector.py to start</p></div>`;
+      return;
+    }
+
+    // Show newest first
+    const sorted = [...allEvents].reverse();
+    area.innerHTML = sorted.map(e => `
+      <div class="log-entry ${e.level}">
+        <div class="log-icon">${e.level === 'CRITICAL' ? '!!!' : e.level === 'WARNING' ? '!' : 'i'}</div>
+        <div class="log-content">
+          <div class="log-message">${escHtml(e.message)}</div>
+          ${e.details ? `<div class="log-details">${escHtml(e.details)}</div>` : ''}
+        </div>
+        <div class="log-time">${e.timestamp.split(' ')[1]}</div>
+      </div>
+    `).join('');
+  }
+
+  function updateStats() {
+    const c = allEvents.filter(e => e.level === 'CRITICAL').length;
+    const w = allEvents.filter(e => e.level === 'WARNING').length;
+    const i = allEvents.filter(e => e.level === 'INFO').length;
+    document.getElementById('totalCount').textContent = allEvents.length;
+    document.getElementById('criticalCount').textContent = c;
+    document.getElementById('warnCount').textContent = w;
+    document.getElementById('infoCount').textContent = i;
+
+    // Last critical
+    const crits = allEvents.filter(e => e.level === 'CRITICAL');
+    const lastCrit = crits[crits.length - 1];
+    document.getElementById('lastAlert').innerHTML = lastCrit
+      ? `<span style="color:var(--danger)">${escHtml(lastCrit.message)}</span><br><span style="color:var(--muted);font-size:10px;">${lastCrit.timestamp}</span>`
+      : '<span style="color:var(--muted)">No critical alerts yet</span>';
+  }
+
+  function updateThreatIndicators() {
+    const msgs = allEvents.map(e => e.message.toLowerCase());
+    const checks = [
+      { id: 'ext',     keywords: ['extension detected', 'ransom extension'] },
+      { id: 'rapid',   keywords: ['rapid file activity', 'rapid change'] },
+      { id: 'entropy', keywords: ['high entropy'] },
+      { id: 'proc',    keywords: ['suspicious process'] },
+      { id: 'note',    keywords: ['ransom note'] },
+      { id: 'mass',    keywords: ['mass deletion', 'mass rename'] },
+    ];
+
+    let threatCount = 0;
+    checks.forEach(({ id, keywords }) => {
+      const hit = msgs.some(m => keywords.some(k => m.includes(k)));
+      const dot = document.getElementById('dot-' + id);
+      const badge = document.getElementById('badge-' + id);
+      if (hit) {
+        dot.className = 'threat-dot danger';
+        badge.className = 'threat-status active';
+        badge.textContent = 'ALERT';
+        threatCount++;
+      } else {
+        dot.className = 'threat-dot success';
+        badge.className = 'threat-status ok';
+        badge.textContent = 'CLEAR';
+      }
+    });
+
+    const tb = document.getElementById('threatBadge');
+    tb.textContent = threatCount > 0 ? `${threatCount} ACTIVE` : 'ALL CLEAR';
+    tb.style.color = threatCount > 0 ? 'var(--danger)' : 'var(--accent)';
+  }
+
+  function updateChartData() {
+    // Add a summary point for the current state
+    const c = allEvents.filter(e => e.level === 'CRITICAL').length;
+    const w = allEvents.filter(e => e.level === 'WARNING').length;
+    const i = allEvents.filter(e => e.level === 'INFO').length;
+    const t = new Date().toLocaleTimeString('en', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    chartData.push({ t, c, w, i });
+    if (chartData.length > MAX_CHART_POINTS) chartData.shift();
+  }
+
+  function renderChart() {
+    const chart = document.getElementById('barChart');
+    const labels = document.getElementById('barLabels');
+    if (chartData.length === 0) {
+      chart.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-family:var(--mono);">No data yet</div>';
+      labels.innerHTML = '';
+      return;
+    }
+    const maxVal = Math.max(1, ...chartData.map(d => d.c + d.w + d.i));
+    chart.innerHTML = chartData.map(d => {
+      const total = d.c + d.w + d.i;
+      const h = Math.max(4, Math.round((total / maxVal) * 110));
+      const cls = d.c > 0 ? 'critical' : d.w > 0 ? 'warning' : d.i > 0 ? 'info' : 'empty';
+      return `<div class="bar ${cls}" style="height:${h}px" data-val="${total} events"></div>`;
+    }).join('');
+    labels.innerHTML = chartData.map(d =>
+      `<div class="bar-label">${d.t.split(':').slice(1).join(':')}</div>`
+    ).join('');
+  }
+
+  function clearDisplay() {
+    allEvents = [];
+    chartData = [];
+    renderLog();
+    updateStats();
+    updateThreatIndicators();
+    renderChart();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Auto-refresh
+  loadEvents();
+  setInterval(loadEvents, 3000);
+
+  // Init empty chart
+  renderChart();
+</script>
+
+</body>
+</html>
